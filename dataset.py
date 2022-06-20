@@ -40,6 +40,7 @@ class LibriSpeechDataset(Dataset):
         
         ds = []
         ws = []
+        
         for k in range(2 * self.window_sz + 1):
             # load next npz file if necessary
             if self.ptrs[ni] <= idx + k:
@@ -51,26 +52,33 @@ class LibriSpeechDataset(Dataset):
             d = mfcc(d, samplerate=16000, winlen=0.025, winstep=0.01, numcep=13)
             d = torch.from_numpy(d).float()
             w = self.words[idx + k]
+            
             ds.append(d)
             ws.append(w)
             
         src, tgts = ds[self.window_sz], ds[: self.window_sz] + ds[self.window_sz + 1: ]
         src_word, tgt_words = ws[self.window_sz], ws[: self.window_sz] + ws[self.window_sz + 1: ]
         
-        return {'src': src, 'tgts': tgts, 'src_word': src_word, 'tgt_words': tgt_words}
+        
+        return {'src': src, 'tgts': tgts, 
+                'src_word': src_word, 'tgt_words': tgt_words}
     
 
     # collate function
+    # TODO: PAD vs PACKING be sure of the differences!
+    # might need to remember the length of each data
     def pad_collate(self, batch):
         src = [item['src'] for item in batch]
-        src = nn.utils.rnn.pad_sequence(src)
+        # src = nn.utils.rnn.pack_sequence(src, enforce_sorted=False)
+        # src = nn.utils.rnn.pad_sequence(src)
         src_word = [item['src_word'] for item in batch]
 
         tgts = []
         tgt_words = []
         for i in range(2 * self.window_sz):
             tgt = [item['tgts'][i] for item in batch]
-            tgt = nn.utils.rnn.pad_sequence(tgt)
+            # tgt = nn.utils.rnn.pack_sequence(tgt, enforce_sorted=False)
+            # tgt = nn.utils.rnn.pad_sequence(tgt)
             tgt_word = [item['tgt_words'][i] for item in batch]
             
             tgts.append(tgt)
