@@ -19,7 +19,7 @@ class ConditionalGRU(nn.Module):
         self.hidden_weights = nn.Linear(self.hidden_dim, 3 * self.hidden_dim)
         self.peep_weights = nn.Linear(self.hidden_dim, 3 * self.hidden_dim)
 
-        self.reset_parameters()    # TODO:Check if this is necessary
+        self.reset_parameters()    # Following RNN intialization
 
     def reset_parameters(self):
         stdv = 1.0 / math.sqrt(self.hidden_dim)
@@ -59,7 +59,7 @@ class ConditionalGRU(nn.Module):
 
 
 class Speech2Vec(nn.Module):
-    """Speech2Vec implementation, inspired by Earth Species Project
+    """Speech2Vec implementation, inspired by Earth Species Project:
     https://github.com/earthspecies/unsupervised-speech-translation/blob/main/unsup_st/speech2vec.py
     """
     def __init__(self, input_dim=13, hidden_dim=50, window_sz=3):
@@ -69,7 +69,8 @@ class Speech2Vec(nn.Module):
         self.encoder = nn.GRU(input_size=input_dim,
                               hidden_size=hidden_dim, 
                               bidirectional=True,
-                              bias=False)
+                              bias=False,
+                              dropout=0)
 
         self.projection = nn.Linear(2 * hidden_dim, hidden_dim)
         
@@ -86,19 +87,29 @@ class Speech2Vec(nn.Module):
         
         _, h_n = self.encoder(x_n)
         h_n = torch.cat((h_n[0], h_n[1]), dim=1)
-
+        
         z_n = self.projection(h_n)
 
-        ys_k = []
-            
+        ys_k = []            
         for k in range(2 * self.window_sz):
+            # Conditional GRU, pack_sequence not supported, so pad_sequence instead.
+            # Note that bias is zero for decoder.
             x_k = nn.utils.rnn.pad_sequence(xs_k[k])
-            # h_k, (_, _) = self.decoders[k](x_k[: -1])
-            
             out_k, _ = self.decoders[k](x_k[: -1], z_n, z_n)
-            # print(f"out_n: {out_k.shape}")
             y_k = self.head(out_k)
+            
             ys_k.append(y_k)
         
         return ys_k
+    
+    
+    def embed(self, x_n):
+        self.eval()
+        x_n = nn.utils.rnn.pack_sequence(x_n, enforce_sorted=False)
+        _, h_n = self.encoder(x_n)
+        h_n = torch.cat((h_n[0], h_n[1]), dim=1)
+        z_n = self.projection(h_n)
+        
+        self.train()
+        return z_n
             
