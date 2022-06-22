@@ -10,6 +10,8 @@ from python_speech_features import mfcc
 
 
 class LibriSpeechDataset(Dataset):
+    """Module for LibriSpeech datset. Current implementation suffers from IO overhead
+    """
     
     def __init__(self, data_dir, word_dir, window_sz=3):
         self.data_dir = data_dir
@@ -71,8 +73,6 @@ class LibriSpeechDataset(Dataset):
     
 
     # collate function
-    # TODO: PAD vs PACKING be sure of the differences!
-    # might need to remember the length of each data
     def pad_collate(self, batch):
         src = [item['src'] for item in batch]
         # src = nn.utils.rnn.pack_sequence(src, enforce_sorted=False)
@@ -95,7 +95,7 @@ class LibriSpeechDataset(Dataset):
     
 
 class LibriSpeechDatasetFast(Dataset):
-    """This implementation loads data in memory. Temporary remedy to slow .npz load.
+    """This implementation loads data in memory to avoid IO overhead.
     """
     def __init__(self, data_dir, word_dir, window_sz=3):
         self.data_dir = data_dir
@@ -133,7 +133,6 @@ class LibriSpeechDatasetFast(Dataset):
         ds = self.datas[idx: idx + 2 * self.window_sz + 1]
         ws = self.words[idx: idx + 2 * self.window_sz + 1]
 
-            
         src, tgts = ds[self.window_sz], ds[: self.window_sz] + ds[self.window_sz + 1: ]
         src_word, tgt_words = ws[self.window_sz], ws[: self.window_sz] + ws[self.window_sz + 1: ]
         
@@ -142,8 +141,6 @@ class LibriSpeechDatasetFast(Dataset):
     
 
     # collate function
-    # TODO: PAD vs PACKING be sure of the differences!
-    # might need to remember the length of each data
     def pad_collate(self, batch):
         src = [item['src'] for item in batch]
         # src = nn.utils.rnn.pack_sequence(src, enforce_sorted=False)
