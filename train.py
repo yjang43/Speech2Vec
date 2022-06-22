@@ -48,6 +48,12 @@ def set_args():
         help='Learning rate'
     )
     parser.add_argument(
+        '--batch_sz', 
+        default=256, 
+        type=int,
+        help='Batch size for training'
+    )
+    parser.add_argument(
         '--epochs', 
         default=10, 
         type=int,
@@ -91,7 +97,7 @@ def save_ckpt(ckpt_dir, ckpt_n, keep_topk=5, **kwargs):
     
     # make sure state_dict is in cpu()
     for p in kwargs['state_dict']:
-        kwargs['state_dict'][p].cpu()
+        kwargs['state_dict'][p] = kwargs['state_dict'][p].cpu()
     torch.save(kwargs, os.path.join(ckpt_dir, ckpt_n))
 
     
@@ -120,9 +126,11 @@ if __name__ == '__main__':
     dataloader = DataLoader(
         dataset, 
         batch_size=args.batch_sz, 
-        num_workers=2,    # comment if dataset suffers from IO overhead
+        num_workers=4,    # comment if dataset suffers from IO overhead
         shuffle=True, 
-        collate_fn=dataset.pad_collate)
+        collate_fn=dataset.pad_collate,
+        pin_memory=True
+    )
 
 
     if ckpt is not None:
@@ -163,7 +171,7 @@ if __name__ == '__main__':
 
             for k in range(2 * args.window_sz):
                 if k == 0:
-                    loss = torch.zeros(1)
+                    loss = torch.zeros(1).to(args.device)
                 # tgt likewise need to be padded sequence.
                 tgt = nn.utils.rnn.pad_sequence(tgts[k])[1: ]
                 loss += criterion(preds[k], tgt)
@@ -171,7 +179,7 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
             # TODO: Clipping to prevent gradient explosion
-            nn.utils.clip_grad.clip_grad_norm(model.parameters(), max_norm=5.0)
+            nn.utils.clip_grad.clip_grad_norm_(model.parameters(), max_norm=5.0)
 
             if (itr + 1) % args.print_itr == 0:
                 loss_item = loss.item()

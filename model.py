@@ -101,7 +101,7 @@ class Speech2Vec(nn.Module):
         
         return ys_k
     
-    
+    @torch.no_grad()
     def embed(self, x_n):
         self.eval()
         x_n = nn.utils.rnn.pack_sequence(x_n, enforce_sorted=False)
