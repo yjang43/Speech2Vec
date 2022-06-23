@@ -150,7 +150,6 @@ class LibriSpeechDatasetFast(Dataset):
         tgts = []
         tgt_words = []
         for i in range(2 * self.window_sz):
-            self.x = batch[1]['tgts']
             tgt = [item['tgts'][i] for item in batch]
             # tgt = nn.utils.rnn.pack_sequence(tgt, enforce_sorted=False)
             # tgt = nn.utils.rnn.pad_sequence(tgt)

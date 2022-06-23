@@ -1,4 +1,5 @@
 import os
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -40,6 +41,12 @@ def set_args():
         default=50, 
         type=int,
         help='The size of word embedding'
+    )
+    parser.add_argument(
+        '--teacher_forcing', 
+        default=0.5, 
+        type=float,
+        help='Rate to use teacher-forcing method'
     )
     parser.add_argument(
         '--lr', 
@@ -117,11 +124,11 @@ if __name__ == '__main__':
     )
     model.to(args.device)
 
-    # dataset = LibriSpeechDataset(
-    #     data_dir=args.data_dir,
-    #     word_dir=args.word_dir, 
-    #     window_sz=args.window_sz
-    # )
+#     dataset = LibriSpeechDataset(
+#         data_dir=args.data_dir,
+#         word_dir=args.word_dir, 
+#         window_sz=args.window_sz
+#     )
     dataset = LibriSpeechDatasetFast(
         data_dir=args.data_dir, 
         word_dir=args.word_dir, 
@@ -148,12 +155,14 @@ if __name__ == '__main__':
         from_epoch = ckpt['epoch'] + 1
         itr = ckpt['itr']
         losses = ckpt['losses']
+        loss_total = ckpt['loss_total']
 
     else:
         # initialize status variables
         from_epoch = 0
         itr = 0
         losses = []
+        loss_total = 0
         
 
     criterion = nn.MSELoss()
@@ -167,11 +176,12 @@ if __name__ == '__main__':
             src, tgts, _, _ = batch
             src = [s.to(args.device) for s in src]
             tgts = [[t.to(args.device) for t in tgt] for tgt in tgts]
+            tf_ratio = random.uniform(0, 1) < args.teacher_forcing
 
             optimizer.zero_grad()
 
             # pred is padded sequence
-            preds = model(src, tgts)
+            preds = model(src, tgts, teacher_forcing=tf_ratio, device=args.device)
 
             for k in range(2 * args.window_sz):
                 if k == 0:
@@ -182,15 +192,17 @@ if __name__ == '__main__':
 
             loss.backward()
             optimizer.step()
-            # TODO: Clipping to prevent gradient explosion
-            nn.utils.clip_grad.clip_grad_norm_(model.parameters(), max_norm=5.0)
+            # Clipping to prevent gradient explosion
+            nn.utils.clip_grad.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            loss_total += loss.item()
 
             if (itr + 1) % args.print_itr == 0:
-                loss_item = loss.item()
-                losses.append(loss_item)
+                loss_avg = loss_total / args.print_itr
+                losses.append(loss_avg)
                 train_progbar.set_description((f"Epoch: {round(epoch + batch_idx / len(dataloader), 3)} | " \
-                                              f"Loss: {round(loss_item, 3)}"))
+                                              f"Loss: {round(loss_avg, 3)}"))
                 train_progbar.refresh()
+                loss_total = 0
                 
             train_progbar.update()
             itr += 1
@@ -208,4 +220,5 @@ if __name__ == '__main__':
             itr=itr, 
             epoch=epoch, 
             losses=losses
+            loss_total=loss_total
         )

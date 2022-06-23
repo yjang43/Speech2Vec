@@ -82,7 +82,7 @@ class Speech2Vec(nn.Module):
 
     
     # center_word, context_word
-    def forward(self, ctr, ctxs):
+    def forward(self, ctr, ctxs, teacher_forcing=False, device='cpu'):
         ctr_packed = nn.utils.rnn.pack_sequence(ctr, enforce_sorted=False)
         
         _, hidden = self.encoder(ctr_packed)
@@ -94,25 +94,28 @@ class Speech2Vec(nn.Module):
         for k in range(2 * self.window_sz):
             # Conditional GRU, pack_sequence not supported, so pad_sequence instead.
             ctx_padded = nn.utils.rnn.pad_sequence(ctxs[k])
-            out = torch.empty_like(ctx_padded)
+            out = torch.empty_like(ctx_padded).to(device)
             
             max_seq_len, batch_sz, inp_dim = ctx_padded.size()
-            dec_inp = torch.zeros((1, batch_sz, inp_dim))
+            dec_inp = torch.zeros((1, batch_sz, inp_dim)).to(device)
             hidden = emb
             steps = range(max_seq_len)
             
             for s in steps:
                 _, hidden = self.decoders[k](dec_inp, hidden, emb)
                 out[s] = self.head(hidden)
-                dec_inp = torch.clone(out[s]).unsqueeze(0).detach()
+                if teacher_forcing:
+                    dec_inp = ctx_padded[s: s+1, :, :]
+                else:
+                    dec_inp = torch.clone(out[s]).unsqueeze(0).detach()
 
             # mask
-            mask = torch.ones_like(out, dtype=bool)
+            mask = torch.ones_like(out, dtype=bool).to(device)
             seq_lens = [ctx_unbatched.size(0) for ctx_unbatched in ctxs[k]]
             for i, sl in enumerate(seq_lens):
                 mask[: sl, i, :] = False
             
-            out = out.masked_fill(mask, 0.)
+            out.masked_fill_(mask, 0.)
             outs.append(out)
         
         return outs
