@@ -117,7 +117,11 @@ if __name__ == '__main__':
     )
     model.to(args.device)
 
-    # dataset = LibriSpeechDataset(data_dir=args.data_dir, word_dir=args.word_dir, window_sz=args.window_sz)
+    # dataset = LibriSpeechDataset(
+    #     data_dir=args.data_dir,
+    #     word_dir=args.word_dir, 
+    #     window_sz=args.window_sz
+    # )
     dataset = LibriSpeechDatasetFast(
         data_dir=args.data_dir, 
         word_dir=args.word_dir, 

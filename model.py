@@ -104,7 +104,7 @@ class Speech2Vec(nn.Module):
             for s in steps:
                 _, hidden = self.decoders[k](dec_inp, hidden, emb)
                 out[s] = self.head(hidden)
-                dec_inp = out[s].unsqueeze(0).detach()
+                dec_inp = torch.clone(out[s]).unsqueeze(0).detach()
 
             # mask
             mask = torch.ones_like(out, dtype=bool)
@@ -112,7 +112,7 @@ class Speech2Vec(nn.Module):
             for i, sl in enumerate(seq_lens):
                 mask[: sl, i, :] = False
             
-            out.masked_fill_(mask, 0.)
+            out = out.masked_fill(mask, 0.)
             outs.append(out)
         
         return outs
