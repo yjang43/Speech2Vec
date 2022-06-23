@@ -73,7 +73,7 @@ class LibriSpeechDataset(Dataset):
     
 
     # collate function
-    def pad_collate(self, batch):
+    def collate_fn(self, batch):
         src = [item['src'] for item in batch]
         # src = nn.utils.rnn.pack_sequence(src, enforce_sorted=False)
         # src = nn.utils.rnn.pad_sequence(src)
@@ -141,7 +141,7 @@ class LibriSpeechDatasetFast(Dataset):
     
 
     # collate function
-    def pad_collate(self, batch):
+    def collate_fn(self, batch):
         src = [item['src'] for item in batch]
         # src = nn.utils.rnn.pack_sequence(src, enforce_sorted=False)
         # src = nn.utils.rnn.pad_sequence(src)

@@ -17,6 +17,8 @@ class ConditionalGRU(nn.Module):
         self.input_weights = nn.Linear(self.input_dim, 3 * self.hidden_dim)
         self.hidden_weights = nn.Linear(self.hidden_dim, 3 * self.hidden_dim)
         self.peep_weights = nn.Linear(self.hidden_dim, 3 * self.hidden_dim)
+        self.tanh = nn.Tanh()
+        self.sigmoid = nn.Sigmoid()
 
         self.reset_parameters()    # Following RNN intialization
 
@@ -25,19 +27,19 @@ class ConditionalGRU(nn.Module):
         for weight in self.parameters():
             weight.data.uniform_(-stdv, stdv)
 
-    def forward(self, input, hidden, ctx):
-        def recurrence(input, hidden, ctx):
+    def forward(self, input_, hidden, ctx):
+        def recurrence(input_, hidden, ctx):
             """Recurrence helper
             """
-            input_gate = self.input_weights(input)
+            input_gate = self.input_weights(input_)
             hidden_gate = self.hidden_weights(hidden)
             peep_gate = self.peep_weights(ctx)
             i_r, i_i, i_n = input_gate.chunk(3, 1)
             h_r, h_i, h_n = hidden_gate.chunk(3, 1)
             p_r, p_i, p_n = peep_gate.chunk(3, 1)
-            resetgate = F.sigmoid(i_r + h_r + p_r)
-            inputgate = F.sigmoid(i_i + h_i + p_i)
-            newgate = F.tanh(i_n + resetgate * h_n + p_n)
+            resetgate = self.sigmoid(i_r + h_r + p_r)
+            inputgate = self.sigmoid(i_i + h_i + p_i)
+            newgate = self.tanh(i_n + resetgate * h_n + p_n)
             # hy = newgate + inputgate * (hidden - newgate)
             hy = hidden - inputgate * (hidden - newgate)     # Revision: https://github.com/Maluuba/gensen/issues/5
 
@@ -45,15 +47,12 @@ class ConditionalGRU(nn.Module):
         
 
         output = []
-        steps = range(input.size(0))
+        steps = range(input_.size(0))
         for i in steps:
-            hidden = recurrence(input[i], hidden, ctx)
-            if isinstance(hidden, tuple):
-                output.append(hidden[0])
-            else:
-                output.append(hidden)
+            hidden = recurrence(input_[i], hidden, ctx)
+            output.append(hidden)
 
-        output = torch.cat(output, 0).view(input.size(0), *output[0].size())
+        output = torch.cat(output, 0).view(input_.size(0), *output[0].size())
         return output, hidden
 
 
@@ -81,34 +80,50 @@ class Speech2Vec(nn.Module):
         self.head = nn.Linear(hidden_dim, input_dim)
 
 
-    def forward(self, x_n, xs_k):
-        x_n = nn.utils.rnn.pack_sequence(x_n, enforce_sorted=False)
+    
+    # center_word, context_word
+    def forward(self, ctr, ctxs):
+        ctr_packed = nn.utils.rnn.pack_sequence(ctr, enforce_sorted=False)
         
-        _, h_n = self.encoder(x_n)
-        h_n = torch.cat((h_n[0], h_n[1]), dim=1)
+        _, hidden = self.encoder(ctr_packed)
+        hidden = torch.cat((hidden[0], hidden[1]), dim=1)
         
-        z_n = self.projection(h_n)
+        emb = self.projection(hidden)
 
-        ys_k = []            
+        outs = []
         for k in range(2 * self.window_sz):
             # Conditional GRU, pack_sequence not supported, so pad_sequence instead.
-            # Note that bias is zero for decoder.
-            x_k = nn.utils.rnn.pad_sequence(xs_k[k])
-            out_k, _ = self.decoders[k](x_k[: -1], z_n, z_n)
-            y_k = self.head(out_k)
+            ctx_padded = nn.utils.rnn.pad_sequence(ctxs[k])
+            out = torch.empty_like(ctx_padded)
             
-            ys_k.append(y_k)
+            max_seq_len, batch_sz, inp_dim = ctx_padded.size()
+            dec_inp = torch.zeros((1, batch_sz, inp_dim))
+            hidden = emb
+            steps = range(max_seq_len)
+            
+            for s in steps:
+                _, hidden = self.decoders[k](dec_inp, hidden, emb)
+                out[s] = self.head(hidden)
+                dec_inp = out[s].unsqueeze(0).detach()
+
+            # mask
+            mask = torch.ones_like(out, dtype=bool)
+            seq_lens = [ctx_unbatched.size(0) for ctx_unbatched in ctxs[k]]
+            for i, sl in enumerate(seq_lens):
+                mask[: sl, i, :] = False
+            
+            out.masked_fill_(mask, 0.)
+            outs.append(out)
         
-        return ys_k
+        return outs
     
     @torch.no_grad()
-    def embed(self, x_n):
+    def embed(self, ctr):
         self.eval()
-        x_n = nn.utils.rnn.pack_sequence(x_n, enforce_sorted=False)
-        _, h_n = self.encoder(x_n)
-        h_n = torch.cat((h_n[0], h_n[1]), dim=1)
-        z_n = self.projection(h_n)
+        ctr_packed = nn.utils.rnn.pack_sequence(ctr, enforce_sorted=False)
+        _, hidden = self.encoder(ctr_packed)
+        hidden = torch.cat((hidden[0], hidden[1]), dim=1)
+        emb = self.projection(hidden)
         
         self.train()
-        return z_n
-            
+        return emb
