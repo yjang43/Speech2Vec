@@ -128,7 +128,7 @@ if __name__ == '__main__':
         batch_size=args.batch_sz, 
         num_workers=4,    # comment if dataset suffers from IO overhead
         shuffle=True, 
-        collate_fn=dataset.pad_collate,
+        collate_fn=dataset.collate_fn,
         pin_memory=True
     )
 
@@ -173,7 +173,7 @@ if __name__ == '__main__':
                 if k == 0:
                     loss = torch.zeros(1).to(args.device)
                 # tgt likewise need to be padded sequence.
-                tgt = nn.utils.rnn.pad_sequence(tgts[k])[1: ]
+                tgt = nn.utils.rnn.pad_sequence(tgts[k])
                 loss += criterion(preds[k], tgt)
 
             loss.backward()
