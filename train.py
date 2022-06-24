@@ -126,7 +126,7 @@ if __name__ == '__main__':
 
     dataset = LibriSpeechDataset(
         data_dir=args.data_dir,
-        word_dir=args.word_dir, 
+        # word_dir=args.word_dir, 
         window_sz=args.window_sz
     )
 #     dataset = LibriSpeechDatasetFast(
@@ -137,7 +137,7 @@ if __name__ == '__main__':
     dataloader = DataLoader(
         dataset, 
         batch_size=args.batch_sz, 
-#         num_workers=2,    # comment if dataset suffers from IO overhead
+        num_workers=2,    # comment if dataset suffers from IO overhead
         shuffle=True, 
         collate_fn=dataset.collate_fn,
         pin_memory=True
