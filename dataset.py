@@ -159,3 +159,57 @@ class LibriSpeechDatasetFast(Dataset):
             tgt_words.append(tgt_word)
 
         return src, tgts, src_word, tgt_words
+
+    
+    
+
+# class LibriSpeechDatasetFast2(Dataset):
+#     """NEW TRY WORKING WITH MFCC
+#     """
+#     def __init__(self, data_dir, word_dir, window_sz=3):
+#         self.data_dir = data_dir
+#         self.window_sz = window_sz
+
+        
+#         with open(os.path.join(word_dir, 'data.txt'), 'r') as f:
+#             ws = f.read()
+#             self.words = ws.split()
+#         self.datas = np.load(os.path.join(data_dir, 'data.npz'))
+#         self.datas = [torch.tensor((self.datas[f'arr_{i}']).tolist()).float() for i in tqdm(range(self.datas['word_cnt']))]
+
+
+    
+#     def __len__(self):
+#         return len(self.words) - 2 * self.window_sz
+    
+#     def __getitem__(self, idx):
+
+#         ds = self.datas[idx: idx + 2 * self.window_sz + 1]
+#         ws = self.words[idx: idx + 2 * self.window_sz + 1]
+
+#         src, tgts = ds[self.window_sz], ds[: self.window_sz] + ds[self.window_sz + 1: ]
+#         src_word, tgt_words = ws[self.window_sz], ws[: self.window_sz] + ws[self.window_sz + 1: ]
+        
+#         return {'src': src, 'tgts': tgts, 
+#                 'src_word': src_word, 'tgt_words': tgt_words}
+    
+
+#     # collate function
+#     def collate_fn(self, batch):
+#         src = [item['src'] for item in batch]
+#         # src = nn.utils.rnn.pack_sequence(src, enforce_sorted=False)
+#         # src = nn.utils.rnn.pad_sequence(src)
+#         src_word = [item['src_word'] for item in batch]
+
+#         tgts = []
+#         tgt_words = []
+#         for i in range(2 * self.window_sz):
+#             tgt = [item['tgts'][i] for item in batch]
+#             # tgt = nn.utils.rnn.pack_sequence(tgt, enforce_sorted=False)
+#             # tgt = nn.utils.rnn.pad_sequence(tgt)
+#             tgt_word = [item['tgt_words'][i] for item in batch]
+            
+#             tgts.append(tgt)
+#             tgt_words.append(tgt_word)
+
+#         return src, tgts, src_word, tgt_words

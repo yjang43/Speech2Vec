@@ -124,20 +124,20 @@ if __name__ == '__main__':
     )
     model.to(args.device)
 
-#     dataset = LibriSpeechDataset(
-#         data_dir=args.data_dir,
-#         word_dir=args.word_dir, 
-#         window_sz=args.window_sz
-#     )
-    dataset = LibriSpeechDatasetFast(
-        data_dir=args.data_dir, 
+    dataset = LibriSpeechDataset(
+        data_dir=args.data_dir,
         word_dir=args.word_dir, 
         window_sz=args.window_sz
     )
+#     dataset = LibriSpeechDatasetFast(
+#         data_dir=args.data_dir, 
+#         word_dir=args.word_dir, 
+#         window_sz=args.window_sz
+#     )
     dataloader = DataLoader(
         dataset, 
         batch_size=args.batch_sz, 
-        num_workers=4,    # comment if dataset suffers from IO overhead
+#         num_workers=2,    # comment if dataset suffers from IO overhead
         shuffle=True, 
         collate_fn=dataset.collate_fn,
         pin_memory=True
@@ -173,6 +173,7 @@ if __name__ == '__main__':
     for epoch in range(from_epoch, args.epochs):
         model.train()
         for batch_idx, batch in enumerate(dataloader):
+            
             src, tgts, _, _ = batch
             src = [s.to(args.device) for s in src]
             tgts = [[t.to(args.device) for t in tgt] for tgt in tgts]
@@ -191,9 +192,11 @@ if __name__ == '__main__':
                 loss += criterion(preds[k], tgt)
 
             loss.backward()
-            optimizer.step()
             # Clipping to prevent gradient explosion
-            nn.utils.clip_grad.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            nn.utils.clip_grad.clip_grad_norm_(model.parameters(), max_norm=5.0)
+            optimizer.step()
+    
+            
             loss_total += loss.item()
 
             if (itr + 1) % args.print_itr == 0:
@@ -219,6 +222,6 @@ if __name__ == '__main__':
             state_dict=model.state_dict(), 
             itr=itr, 
             epoch=epoch, 
-            losses=losses
+            losses=losses,
             loss_total=loss_total
         )

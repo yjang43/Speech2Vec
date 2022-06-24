@@ -67,7 +67,6 @@ class Speech2Vec(nn.Module):
         self.encoder = nn.GRU(input_size=input_dim,
                               hidden_size=hidden_dim, 
                               bidirectional=True,
-                              bias=False,
                               dropout=0)
 
         self.projection = nn.Linear(2 * hidden_dim, hidden_dim)
@@ -76,6 +75,11 @@ class Speech2Vec(nn.Module):
                                                      hidden_dim=hidden_dim,
                                                      dropout=0)
                                       for _ in range(2 * window_sz))
+#         self.decoders = nn.ModuleList(nn.GRU(input_size=input_dim,
+#                                              hidden_size=hidden_dim,
+#                                              bidirectional=False,
+#                                              dropout=0)
+#                                       for _ in range(2 * window_sz))
 
         self.head = nn.Linear(hidden_dim, input_dim)
 
@@ -99,10 +103,12 @@ class Speech2Vec(nn.Module):
             max_seq_len, batch_sz, inp_dim = ctx_padded.size()
             dec_inp = torch.zeros((1, batch_sz, inp_dim)).to(device)
             hidden = emb
+#             hidden = emb.unsqueeze(0)
             steps = range(max_seq_len)
             
             for s in steps:
                 _, hidden = self.decoders[k](dec_inp, hidden, emb)
+#                 _, hidden = self.decoders[k](dec_inp, hidden)
                 out[s] = self.head(hidden)
                 if teacher_forcing:
                     dec_inp = ctx_padded[s: s+1, :, :]
