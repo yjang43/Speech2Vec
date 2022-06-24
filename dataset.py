@@ -35,7 +35,7 @@ class LibriSpeechDataset(Dataset):
         assert len(self.words) == len(self.index)
     
     def __len__(self):
-        return len(self.words)
+        return len(self.words) - 2 * self.window_sz
     
     def __getitem__(self, idx):
         
