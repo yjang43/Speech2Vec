@@ -42,7 +42,7 @@ _words.txt_ is a list of words and _index.txt_ is a map to the location of corre
 To extract vocabularies, run the script.
 _(Currently, run the script through word_alignment.ipynb)_
 ```bash
-TBH
+TBA
 ```
 
 
@@ -60,4 +60,4 @@ Train time takes about 8 hours for 10 epochs in NVIDIA GTX 1080 Ti, but note tha
 
 ## Analysis
 
-TBH
+TBA
