@@ -126,7 +126,7 @@ if __name__ == '__main__':
 
     dataset = LibriSpeechDataset(
         data_dir=args.data_dir,
-        word_dir=args.word_dir, 
+        # word_dir=args.word_dir, 
         window_sz=args.window_sz
     )
 #     dataset = LibriSpeechDatasetFast(
@@ -137,10 +137,12 @@ if __name__ == '__main__':
     dataloader = DataLoader(
         dataset, 
         batch_size=args.batch_sz, 
-#         num_workers=2,    # comment if dataset suffers from IO overhead
+        # https://forums.fast.ai/t/gpu-utilization-jumps-to-zero-often/27972/8
+        num_workers=3,    # comment if dataset suffers from IO overhead
         shuffle=True, 
         collate_fn=dataset.collate_fn,
-        pin_memory=True
+        pin_memory=True,
+        persistent_workers=True,
     )
 
 
@@ -149,6 +151,7 @@ if __name__ == '__main__':
         # model load from ckpt
         model.cpu()
         model.load_state_dict(ckpt['state_dict'])
+        print(f"Successfully loaded checkpoint {args.ckpt_n}")
         model.to(args.device)
 
         # status variables load from ckpt
