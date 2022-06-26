@@ -76,4 +76,5 @@ TBA
 
 ## Reference
 [1] C. Yu-An and J. Glass, "Speech2vec: A sequence-to-sequence framework for learning word embeddings from speech", INTERSPEECH, pp. 811-815, 2018.
+
 [2] S. Subramanian, A. Trischler, Y. Bengio, and C. Pal, “Learning general purpose distributed sentence representations via large scale multi-task learning,” in ICLR, 2018.
