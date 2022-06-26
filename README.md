@@ -1,7 +1,17 @@
 # Speech2Vec
 
 ## Overview
-Reenactment of Speech2Vec from [here](https://arxiv.org/pdf/1803.08976.pdf). Unfortunately, model architecture for the paper is not fully explained in detail, and many of others' implementation of _Speech2Vec_ varied. This is a best of my attempt to accurately model the architecture.
+Reenactment of Speech2Vec from [1]. Unfortunately, model architecture for the paper is not fully explained in detail, and many of others' implementation of _Speech2Vec_ varied. This is a best of my attempt to accurately model the architecture.
+
+
+_Note on Model Architecture_
+1. _Conditional GRU introduced from  is used from [2]._
+2. _Single decoder for each corresponding window._
+3. _Little teacher forcing learning._
+4. _Feed zeros-vector as first input of decoder._
+
+Throughout training and analyzing, decoder seemed to output a value from previous step and give a trivial result. I believe this is due to having MSE loss function and taking a mean of data disregarding its variance. If not, please help to debug.
+
 
 ## Installation
 Clone the repository and install the required packages.
@@ -40,9 +50,9 @@ _words.txt_ is a list of words and _index.txt_ is a map to the location of corre
 
 
 To extract vocabularies, run the script.
-_(Currently, run the script through word_alignment.ipynb)_
 ```bash
-TBA
+python ./word_alignment.py --data_dir ./data \
+                           --librispeech_path ./LibriSpeech/test-clean
 ```
 
 
@@ -61,3 +71,9 @@ Train time takes about 8 hours for 10 epochs in NVIDIA GTX 1080 Ti, but note tha
 ## Analysis
 
 TBA
+
+
+
+## Reference
+[1] C. Yu-An and J. Glass, "Speech2vec: A sequence-to-sequence framework for learning word embeddings from speech", INTERSPEECH, pp. 811-815, 2018.
+[2] S. Subramanian, A. Trischler, Y. Bengio, and C. Pal, “Learning general purpose distributed sentence representations via large scale multi-task learning,” in ICLR, 2018.
